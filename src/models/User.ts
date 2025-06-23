@@ -12,8 +12,6 @@ export interface IUser extends Document {
   };
   stats: {
     completed: Array<{
-      taskId?: string;
-      projectId?: string;
       timestamp: Date;
     }>;
   };
@@ -32,8 +30,6 @@ const UserSchema: Schema = new Schema({
   stats: {
     completed: [
       {
-        taskId: { type: String },
-        projectId: { type: String },
         timestamp: { type: Date, required: true },
       },
     ],
