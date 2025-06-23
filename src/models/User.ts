@@ -13,6 +13,7 @@ export interface IUser extends Document {
   stats: {
     completed: Array<{
       timestamp: Date;
+      pomodoroDuration: number;
     }>;
   };
 }
@@ -31,6 +32,7 @@ const UserSchema: Schema = new Schema({
     completed: [
       {
         timestamp: { type: Date, required: true },
+        pomodoroDuration: { type: Number, required: true },
       },
     ],
   },

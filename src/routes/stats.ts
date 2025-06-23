@@ -38,13 +38,17 @@ router.get("/completed/all", auth as any, async (req: AuthRequest, res) => {
 // POST /api/stats/complete - Record a completed pomodoro
 router.post("/complete", auth as any, async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.userId;
+  const { pomodoroDuration } = req.body;
   try {
     const user = await User.findById(userId);
     if (!user) {
       res.status(404).json({ message: "User not found" });
       return;
     }
-    user.stats.completed.push({ timestamp: new Date() });
+    user.stats.completed.push({ 
+      timestamp: new Date(),
+      pomodoroDuration: pomodoroDuration || user.settings.pomodoroDuration
+    });
     await user.save();
     res.json({ count: user.stats.completed.length });
   } catch (err) {
@@ -68,12 +72,12 @@ router.post("/reset", auth as any, async (req: AuthRequest, res) => {
     }
 });
 
-// POST /api/stats/complete/bulk - Add multiple completed pomodoros with timestamps
+// POST /api/stats/complete/bulk - Add multiple completed pomodoros with timestamps and durations
 router.post("/complete/bulk", auth as any, async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.userId;
-  const { timestamps } = req.body;
-  if (!Array.isArray(timestamps)) {
-    res.status(400).json({ message: "Invalid timestamps array" });
+  const { entries } = req.body;
+  if (!Array.isArray(entries)) {
+    res.status(400).json({ message: "Invalid entries array" });
     return;
   }
   try {
@@ -82,9 +86,12 @@ router.post("/complete/bulk", auth as any, async (req: AuthRequest, res: Respons
       res.status(404).json({ message: "User not found" });
       return;
     }
-    for (const ts of timestamps) {
-      if (typeof ts === 'string') {
-        user.stats.completed.push({ timestamp: new Date(ts) });
+    for (const entry of entries) {
+      if (entry && typeof entry.timestamp === 'string') {
+        user.stats.completed.push({ 
+          timestamp: new Date(entry.timestamp),
+          pomodoroDuration: entry.pomodoroDuration || user.settings.pomodoroDuration
+        });
       }
     }
     await user.save();
