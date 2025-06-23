@@ -4,6 +4,7 @@ import dotenv from "dotenv";
 import cors from "cors";
 import authRoutes from "./routes/auth";
 import statsRoutes from "./routes/stats";
+import settingsRoutes from "./routes/settings";
 
 dotenv.config();
 
@@ -28,3 +29,4 @@ mongoose.connect(MONGODB_URI)
 
 app.use("/api/auth", authRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/settings", settingsRoutes);
