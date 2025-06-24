@@ -153,4 +153,87 @@ router.post("/sync", auth as any, async (req: AuthRequest, res) => {
     }
 });
 
+// GET /api/stats/backup - export complete user data for backup
+router.get("/backup", auth as any, async (req: AuthRequest, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        
+        const backupData = {
+            version: "1.0.0",
+            timestamp: new Date().toISOString(),
+            settings: user.settings,
+            stats: user.stats,
+        };
+        
+        res.json(backupData);
+    } catch (err) {
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+// POST /api/stats/backup - restore complete user data from backup
+router.post("/backup", auth as any, async (req: AuthRequest, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        
+        const { settings, stats } = req.body;
+        
+        // Validate backup data
+        if (!settings || typeof settings !== 'object') {
+            res.status(400).json({ message: "Invalid settings data" });
+            return;
+        }
+        
+        if (!stats || !Array.isArray(stats.completed)) {
+            res.status(400).json({ message: "Invalid stats data" });
+            return;
+        }
+        
+        // Validate settings fields
+        const requiredSettings = ['pomodoroDuration', 'shortBreakDuration', 'longBreakDuration', 'autoStartBreak', 'autoStartPomodoro'];
+        for (const field of requiredSettings) {
+            if (typeof settings[field] === 'undefined') {
+                res.status(400).json({ message: `Missing required setting: ${field}` });
+                return;
+            }
+        }
+        
+        // Validate stats entries
+        for (const entry of stats.completed) {
+            if (!entry || typeof entry.timestamp !== 'string' || typeof entry.pomodoroDuration !== 'number') {
+                res.status(400).json({ message: "Invalid stats entry format" });
+                return;
+            }
+        }
+        
+        // Replace user data with backup data
+        user.settings = {
+            ...settings,
+            lastUpdated: new Date(),
+        };
+        user.stats.completed = stats.completed.map((entry: any) => ({
+            timestamp: new Date(entry.timestamp),
+            pomodoroDuration: entry.pomodoroDuration,
+        }));
+        
+        await user.save();
+        
+        res.json({ 
+            message: "Backup restored successfully",
+            settings: user.settings,
+            stats: user.stats 
+        });
+    } catch (err) {
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
 export default router; 
