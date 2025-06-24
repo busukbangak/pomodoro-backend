@@ -9,9 +9,11 @@ export interface IUser extends Document {
     longBreakDuration: number;
     autoStartBreak: boolean;
     autoStartPomodoro: boolean;
+    lastUpdated: Date;
   };
   stats: {
     completed: Array<{
+      _id?: mongoose.Schema.Types.ObjectId;
       timestamp: Date;
       pomodoroDuration: number;
     }>;
@@ -27,10 +29,12 @@ const UserSchema: Schema = new Schema({
     longBreakDuration: { type: Number, default: 15 },
     autoStartBreak: { type: Boolean, default: false },
     autoStartPomodoro: { type: Boolean, default: false },
+    lastUpdated: { type: Date, default: Date.now },
   },
   stats: {
     completed: [
       {
+        _id: { type: mongoose.Schema.Types.ObjectId, auto: true },
         timestamp: { type: Date, required: true },
         pomodoroDuration: { type: Number, required: true },
       },

@@ -101,4 +101,56 @@ router.post("/complete/bulk", auth as any, async (req: AuthRequest, res: Respons
   }
 });
 
+// GET /api/stats/sync - get all user data for sync
+router.get("/sync", auth as any, async (req: AuthRequest, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        res.json({ settings: user.settings, stats: user.stats });
+    } catch (err) {
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
+// POST /api/stats/sync - merge user data from client (two-way sync)
+router.post("/sync", auth as any, async (req: AuthRequest, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        if (!user) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+        // Merge settings if provided
+        if (req.body.settings) {
+            const incoming = req.body.settings;
+            const stored = user.settings;
+            // Only update if incoming is newer
+            if (!stored.lastUpdated || (incoming.lastUpdated && new Date(incoming.lastUpdated) > new Date(stored.lastUpdated))) {
+                user.settings = {
+                    ...stored,
+                    ...incoming,
+                    lastUpdated: new Date(),
+                };
+            }
+        }
+        // Merge stats.completed if provided
+        if (req.body.stats && Array.isArray(req.body.stats.completed)) {
+            const existingTimestamps = new Set(user.stats.completed.map((c: any) => new Date(c.timestamp).getTime()));
+            for (const entry of req.body.stats.completed) {
+                const entryTime = new Date(entry.timestamp).getTime();
+                if (!existingTimestamps.has(entryTime)) {
+                    user.stats.completed.push(entry);
+                }
+            }
+        }
+        await user.save();
+        res.json({ settings: user.settings, stats: user.stats });
+    } catch (err) {
+        res.status(500).json({ message: "Server error" });
+    }
+});
+
 export default router; 
